@@ -27,8 +27,7 @@
 #include "storage/proc.h"
 #include "fmgr.h"
 
-
-PG_MODULE_MAGIC;
+#include "jni.h"
 
 
 void _PG_init(void);

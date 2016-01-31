@@ -19,13 +19,83 @@
 #include "pgj.h"
 
 
+PG_MODULE_MAGIC;
+
+
+static JNIEnv *jniEnv;
+static JavaVM *jvm;
+
+
 static void handleSigterm(SIGNAL_ARGS) {
     int oldErrno;
+    
+    elog(LOG, "SIGTERM called");
     
     oldErrno = errno;
     if(MyProc)
         SetLatch(&MyProc->procLatch);
     errno = oldErrno;
+    
+    // TODO: This method is currently not being called
+}
+
+static void destroyJVM() {
+    elog(LOG, "Destroying JVM");
+    (*jvm)->DestroyJavaVM(jvm);
+    proc_exit(0);   // TODO: should not be needed, if handleSigterm is called
+}
+
+static void startJVM() {
+    JavaVMInitArgs vmArgs;
+    JavaVMOption *vmOptions;
+    jint createVMResult;
+    jclass class;
+    jmethodID mainMethod;
+    jstring mainMethodArg;
+    
+    /* VM arguments and options */
+    vmArgs.version = JNI_VERSION_1_6;
+    vmArgs.ignoreUnrecognized = JNI_FALSE;
+    vmArgs.nOptions = 1;
+    vmOptions = (JavaVMOption*) palloc(sizeof(JavaVMOption));
+    vmOptions->optionString = "-Djava.class.path=/tmp/pgj";   // TODO: don't hardwire
+    vmArgs.options = vmOptions;
+    
+    /* Create and set destroy handler */
+    createVMResult = JNI_CreateJavaVM(&jvm, (void**) &jniEnv, &vmArgs); 
+    if(JNI_OK != createVMResult) {
+        elog(ERROR, "Could not create JVM. Error code: %d", createVMResult);
+        return;
+    }
+    on_proc_exit(destroyJVM, 0);
+    pfree(vmOptions);
+    elog(LOG, "JVM started");
+    
+    /* Run the Java code */
+    class = (*jniEnv)->FindClass(jniEnv, "Main");
+    if(NULL == class) {
+        (*jniEnv)->ExceptionDescribe(jniEnv);
+        elog(ERROR, "Could not find Main class");
+        return;
+    }
+    
+    mainMethod = (*jniEnv)->GetStaticMethodID(jniEnv, class, "main", "(Ljava/lang/String;)V");
+    if(NULL == mainMethod) {
+        elog(ERROR, "Could not find main method");
+        (*jniEnv)->ExceptionDescribe(jniEnv);
+        return;
+    }
+    
+    mainMethodArg = (*jniEnv)->NewStringUTF(jniEnv, "pgj");
+    (*jniEnv)->CallStaticVoidMethod(jniEnv, class, mainMethod, mainMethodArg);
+    if((*jniEnv)->ExceptionCheck(jniEnv)) {
+        elog(ERROR, "Main method failed");
+        (*jniEnv)->ExceptionDescribe(jniEnv);
+        (*jniEnv)->ExceptionClear(jniEnv);
+        return;
+    }
+    
+    elog(LOG, "Main method successfully run(ing)");
 }
 
 /*
@@ -39,7 +109,7 @@ static void pgj(Datum mainArg) {
     BackgroundWorkerUnblockSignals();
     
     /* Start JVM */
-    elog(LOG, "TODO: start the JVM...");
+    startJVM();
     
     /* Exit when signaled or postmaster dies */
     ResetLatch(&MyProc->procLatch);
