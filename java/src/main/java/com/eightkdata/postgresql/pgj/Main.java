@@ -16,24 +16,14 @@
  */
 
 
-#ifndef PGJ_H
-#define PGJ_H
+package com.eightkdata.postgresql.pgj;
 
-
-#include "postgres.h"
-#include "postmaster/bgworker.h"
-#include "storage/ipc.h"
-#include "storage/latch.h"
-#include "storage/proc.h"
-#include "fmgr.h"
-
-#include "jni.h"
-#include "pgj_local.h"
-
-#define PGJ_JAVA_MAIN_CLASS "com/eightkdata/postgresql/pgj/Main"
-
-
-void _PG_init(void);
-
-
-#endif /* PGJ_H */
+/**
+ * Entry point of pgj.
+ * The JVM will call the {@link #main(String)} method when launched.
+ */
+public class Main {
+    public static void main(String value) {
+        System.out.println("PGJ: " + value);
+    }
+}

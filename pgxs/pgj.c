@@ -58,7 +58,7 @@ static void startJVM() {
     vmArgs.ignoreUnrecognized = JNI_FALSE;
     vmArgs.nOptions = 1;
     vmOptions = (JavaVMOption*) palloc(sizeof(JavaVMOption));
-    vmOptions->optionString = "-Djava.class.path=/tmp/pgj";   // TODO: don't hardwire
+    sprintf(vmOptions->optionString, "-Djava.class.path=%s", PGJ_JAVA_ARTIFACT_PATH);
     vmArgs.options = vmOptions;
     
     /* Create and set destroy handler */
@@ -72,7 +72,7 @@ static void startJVM() {
     elog(LOG, "JVM started");
     
     /* Run the Java code */
-    class = (*jniEnv)->FindClass(jniEnv, "Main");
+    class = (*jniEnv)->FindClass(jniEnv, PGJ_JAVA_MAIN_CLASS);
     if(NULL == class) {
         (*jniEnv)->ExceptionDescribe(jniEnv);
         elog(ERROR, "Could not find Main class");

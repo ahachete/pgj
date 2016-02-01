@@ -1,3 +1,7 @@
 *.o
 *.so
 nbproject/
+pgxs/pgj_local.h
+.idea/
+*.iml
+target/

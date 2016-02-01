@@ -9,6 +9,17 @@ It only works on Linux, but it should be possible to run it on other OSes (feel 
 
 ## Compiling pgj
 
+### Java part of pgj
+
+You need to compile first the Java part, as the generated Jar file will be included as part of the extension.
+This is a standard Maven program:
+
+    cd java
+    mvn package
+
+A jar file should have been generated under `java/target/pgj-<VERSION>.jar`.
+
+
 ### The PostgreSQL extension (`pgxs`)
 
 You need a suitable JDK (version 6 or above) and export its path via the `JAVA_HOME` environment variable.
